@@ -3,3 +3,6 @@ target/
 *.iml
 *.ipr
 *.iws
+/server/nbproject/
+*.class
+*.jar

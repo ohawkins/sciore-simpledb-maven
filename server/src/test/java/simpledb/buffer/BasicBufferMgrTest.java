@@ -6,13 +6,19 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 import simpledb.file.Block;
+import simpledb.server.SimpleDB;
 
 /**
- *
  * @author yasiro01
  */
 public class BasicBufferMgrTest {
+  private BufferMgr instance;
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
   
   public BasicBufferMgrTest() {
   }
@@ -27,16 +33,105 @@ public class BasicBufferMgrTest {
   
   @Before
   public void setUp() {
+    SimpleDB.init("testdb");
+    instance = SimpleDB.bufferMgr();
+    instance = new BufferMgr(4);
+    Buffer buff10 = instance.pin(new Block("tempbuffer", 10));
+    Buffer buff20 = instance.pin(new Block("tempbuffer", 20));
+    Buffer buff30 = instance.pin(new Block("tempbuffer", 30));
+    Buffer buff40 = instance.pin(new Block("tempbuffer", 40));
+    instance.unpin(buff20);
+    Buffer buff50 = instance.pin(new Block("tempbuffer", 50));
+    instance.unpin(buff40);
+    instance.unpin(buff10);
+    instance.unpin(buff30);
+    instance.unpin(buff50);
   }
   
   @After
   public void tearDown() {
   }
+  
+  /**
+   * Test of Naive Buffer selection strategy, of class BasicBufferMgr.
+   */
+  @Test
+  public void testNaiveStrategy() {
+    int expectedResult, result;
+    System.out.println("Naive Strategy");
+    instance.setStrategy(0);
+    instance.pin(new Block("tempbuffer", 60));
+    instance.pin(new Block("tempbuffer", 70));
 
+    expectedResult = 60;
+    result = instance.getBuffers()[0].block().number();
+    assertEquals(expectedResult, result);
+    expectedResult = 70;
+    result = instance.getBuffers()[1].block().number();
+    assertEquals(expectedResult, result);
+  }
+  /**
+   * Test of FIFO Buffer selection strategy, of class BasicBufferMgr.
+   */
+  @Test
+  public void testFIFOStrategy() {
+    thrown.expect(UnsupportedOperationException.class); //  remove this line once useFIFOStrategy is implemented
+    int expectedResult, result;
+    System.out.println("FIFO Strategy");
+    instance.setStrategy(1);
+    instance.pin(new Block("tempbuffer", 60));
+    instance.pin(new Block("tempbuffer", 70));
+
+    expectedResult = 60;
+    result = instance.getBuffers()[0].block().number();
+    assertEquals(expectedResult, result);
+    expectedResult = 70;
+    result = instance.getBuffers()[2].block().number();
+    assertEquals(expectedResult, result);
+  }
+  /**
+   * Test of LRU Buffer selection strategy, of class BasicBufferMgr.
+   */
+  @Test
+  public void testLRUStrategy() {
+    thrown.expect(UnsupportedOperationException.class); //  remove this line once useLRUStrategy is implemented
+    int expectedResult, result;
+    System.out.println("LRU Strategy");
+    instance.setStrategy(2);
+    instance.pin(new Block("tempbuffer", 60));
+    instance.pin(new Block("tempbuffer", 70));
+
+    expectedResult = 60;
+    result = instance.getBuffers()[3].block().number();
+    assertEquals(expectedResult, result);
+    expectedResult = 70;
+    result = instance.getBuffers()[0].block().number();
+    assertEquals(expectedResult, result);
+  }
+  /**
+   * Test of Clock Buffer selection strategy, of class BasicBufferMgr.
+   */
+  @Test
+  public void testClockStrategy() {
+    thrown.expect(UnsupportedOperationException.class); //  remove this line once useClockStrategy is implemented
+    int expectedResult, result;
+    System.out.println("Clock Strategy");
+    instance.setStrategy(3);
+    instance.pin(new Block("tempbuffer", 60));
+    instance.pin(new Block("tempbuffer", 70));
+
+    expectedResult = 60;
+    result = instance.getBuffers()[2].block().number();
+    assertEquals(expectedResult, result);
+    expectedResult = 70;
+    result = instance.getBuffers()[3].block().number();
+    assertEquals(expectedResult, result);
+  }
   /**
    * Test of flushAll method, of class BasicBufferMgr.
    */
   @Test
+  @Ignore
   public void testFlushAll() {
     System.out.println("flushAll");
     int txnum = 0;
@@ -50,6 +145,7 @@ public class BasicBufferMgrTest {
    * Test of pin method, of class BasicBufferMgr.
    */
   @Test
+  @Ignore
   public void testPin() {
     System.out.println("pin");
     Block blk = null;
@@ -65,6 +161,7 @@ public class BasicBufferMgrTest {
    * Test of pinNew method, of class BasicBufferMgr.
    */
   @Test
+  @Ignore
   public void testPinNew() {
     System.out.println("pinNew");
     String filename = "";
@@ -81,6 +178,7 @@ public class BasicBufferMgrTest {
    * Test of unpin method, of class BasicBufferMgr.
    */
   @Test
+  @Ignore
   public void testUnpin() {
     System.out.println("unpin");
     Buffer buff = null;
@@ -94,6 +192,7 @@ public class BasicBufferMgrTest {
    * Test of available method, of class BasicBufferMgr.
    */
   @Test
+  @Ignore
   public void testAvailable() {
     System.out.println("available");
     BasicBufferMgr instance = null;
@@ -103,5 +202,5 @@ public class BasicBufferMgrTest {
     // TODO review the generated test code and remove the default call to fail.
     fail("The test case is a prototype.");
   }
-  
+   
 }

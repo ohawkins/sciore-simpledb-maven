@@ -134,5 +134,18 @@ public class BufferMgr {
    public Buffer[] getBuffers() {
      return this.bufferMgr.getBuffers();
    }
-
+   
+   public void status() {
+       Buffer[] bufferArray = getBuffers();
+       for (int i = 0; i < bufferArray.length; i++) {
+           System.out.print("Buffer " + i + ":");
+           System.out.print("\n");
+           System.out.print(bufferArray[i].block());
+           System.out.print("\n");
+           System.out.print(bufferArray[i].getTimeAdded());
+           System.out.print("\n");
+           System.out.print(bufferArray[i].getTimeAccessed()); 
+           System.out.print("\n");
+       }
+   }
 }

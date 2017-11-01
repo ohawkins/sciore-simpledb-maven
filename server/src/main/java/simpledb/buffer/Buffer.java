@@ -109,15 +109,15 @@ public class Buffer {
    public void updateTimeAdded() {
        Date now = new Date();
        this.timeLastAdded = now;
-       System.out.print("Time Added:");
-       System.out.print(now);
+//       System.out.print("Time Added:");
+//       System.out.print(now);
    }
    
    public void updateTimeAccessed() {
        Date now = new Date();
        this.timeLastAccessed = now;
-       System.out.print("Time Accessed:");
-       System.out.print(now);
+//       System.out.print("Time Accessed:");
+//       System.out.print(now);
    }
    
    public Date getTimeAdded() {

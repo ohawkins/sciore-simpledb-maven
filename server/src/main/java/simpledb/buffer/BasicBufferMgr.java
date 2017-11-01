@@ -67,10 +67,12 @@ class BasicBufferMgr {
             }
             buff.assignToBlock(blk);
         }
+        
         if (!buff.isPinned()) {
             numAvailable--;
         }
         buff.pin();
+        buff.updateTimeAdded();
         return buff;
     }
 
@@ -186,13 +188,14 @@ class BasicBufferMgr {
         for (Buffer buff : bufferpool) {
             if (!buff.isPinned()) {
                 if (buff.getTimeAdded().before(min)) {
+                    System.out.print("WE IN HERE");
                     min = buff.getTimeAdded();
                     leastRecentlyAddedBuffer = buff;
                 }
-                return leastRecentlyAddedBuffer;
+                
             }
         }
-        return null;
+        return leastRecentlyAddedBuffer;
     }
 
     /**

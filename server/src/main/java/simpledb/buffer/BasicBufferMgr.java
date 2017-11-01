@@ -91,8 +91,8 @@ class BasicBufferMgr {
         buff.assignToNew(filename, fmtr);
         numAvailable--;
         buff.pin();
-        // When a buffer is read in from memory, the 
-        buff.updateTime(1);
+        // When a buffer is read in from memory, update its attribute
+        buff.updateTimeAdded();
         return buff;
     }
 
@@ -104,7 +104,7 @@ class BasicBufferMgr {
     synchronized void unpin(Buffer buff) {
         buff.unpin();
         // Each time the buffer is unpinned, its attribute of timeLastAccessed is updated to the current time
-        buff.updateTime(0);
+        buff.updateTimeAccessed();
         if (!buff.isPinned()) {
             numAvailable++;
         }
@@ -180,12 +180,12 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useFIFOStrategy() {
-        throw new UnsupportedOperationException();
-        Date min = bufferpool[0].getTimeAdded();
-        Buffer leastRecentlyAddedBuffer;
+        Date min = new Date();
+        min = bufferpool[0].getTimeAdded();
+        Buffer leastRecentlyAddedBuffer = new Buffer();
         for (Buffer buff : bufferpool) {
             if (!buff.isPinned()) {
-                if (buff.getTimeAdded() < min) {
+                if (buff.getTimeAdded().before(min)) {
                     min = buff.getTimeAdded();
                     leastRecentlyAddedBuffer = buff;
                 }
@@ -201,19 +201,19 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useLRUStrategy() {
-        throw new UnsupportedOperationException();
-        Date min = bufferpool[0].getTimeAccessed();
-        Buffer leastRecentlyAccessedBuffer;
+        Date min = new Date();
+        min = bufferpool[0].getTimeAccessed();
+        Buffer leastRecentlyAccessedBuffer = new Buffer();
         for (Buffer buff : bufferpool) {
             if (!buff.isPinned()) {
-                if (buff.getTimeAccessed() < min) {
+                if (buff.getTimeAccessed().before(min)) {
                     min = buff.getTimeAccessed();
                     leastRecentlyAccessedBuffer = buff;
                 }
-                return leastRecentlyAccessedBuffer;
+                
             }
         }
-        return null;
+        return leastRecentlyAccessedBuffer;
     }
 
     /**
@@ -222,14 +222,18 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useClockStrategy() {
-        throw new UnsupportedOperationException();
-        Date max = bufferpool[0].getTimeAccessed();
-        int mostRecentlyAccessedBufferIndex;
+        Date max = new Date();
+        max = bufferpool[0].getTimeAccessed();
+        int mostRecentlyAccessedBufferIndex = 0;
         for (int i=0; i < bufferpool.length; i++) {
-            if (bufferpool[i].getTimeAccessed() > max) {
+            if (bufferpool[i].getTimeAccessed().after(max)) {
                 max = bufferpool[i].getTimeAccessed();
                 mostRecentlyAccessedBufferIndex = i;
             }
+            if (mostRecentlyAccessedBufferIndex + 1 < bufferpool.length) {
+                return bufferpool[mostRecentlyAccessedBufferIndex + 1];
+            }
         }
+        return null;
     }
 }

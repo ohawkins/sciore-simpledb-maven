@@ -106,23 +106,18 @@ public class Buffer {
       contents.setString(offset, val);
    }
    
-   /**
-    * Updates the buffer's attributes to the current time using a switch statement
-    * @param attribute
-    * @throws Exception 
-    */
-   public void updateTime(int attribute) throws Exception {
+   public void updateTimeAdded() {
        Date now = new Date();
-       
-       switch (attribute) {
-           case 0:
-               this.timeLastAccessed = now;
-               break;
-           case 1:
-               this.timeLastAdded = now;
-           default:
-               throw new Exception("Not able to update time due to unsupported attribute value!");
-       }
+       this.timeLastAdded = now;
+       System.out.print("Time Added:");
+       System.out.print(now);
+   }
+   
+   public void updateTimeAccessed() {
+       Date now = new Date();
+       this.timeLastAccessed = now;
+       System.out.print("Time Accessed:");
+       System.out.print(now);
    }
    
    public Date getTimeAdded() {

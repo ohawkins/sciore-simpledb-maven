@@ -105,6 +105,33 @@ public class Buffer {
 	      logSequenceNumber = lsn;
       contents.setString(offset, val);
    }
+   
+   /**
+    * Updates the buffer's attributes to the current time using a switch statement
+    * @param attribute
+    * @throws Exception 
+    */
+   public void updateTime(int attribute) throws Exception {
+       Date now = new Date();
+       
+       switch (attribute) {
+           case 0:
+               this.timeLastAccessed = now;
+               break;
+           case 1:
+               this.timeLastAdded = now;
+           default:
+               throw new Exception("Not able to update time due to unsupported attribute value!");
+       }
+   }
+   
+   public Date getTimeAdded() {
+       return this.timeLastAdded;
+   }
+   
+   public Date getTimeAccessed() {
+       return this.timeLastAccessed;
+   }
 
    /**
     * Returns a reference to the disk block

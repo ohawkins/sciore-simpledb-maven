@@ -210,7 +210,6 @@ class BasicBufferMgr {
                     min = buff.getTimeAccessed();
                     leastRecentlyAccessedBuffer = buff;
                 }
-                
             }
         }
         return leastRecentlyAccessedBuffer;

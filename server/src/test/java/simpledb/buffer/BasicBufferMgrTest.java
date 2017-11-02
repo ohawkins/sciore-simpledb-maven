@@ -1,13 +1,16 @@
 package simpledb.buffer;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDateTime;
 import org.junit.After;
 import org.junit.AfterClass;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
 import org.junit.Ignore;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import simpledb.file.Block;
 import simpledb.server.SimpleDB;
@@ -62,7 +65,7 @@ public class BasicBufferMgrTest {
     instance.setStrategy(0);
     instance.pin(new Block("tempbuffer", 60));
     instance.pin(new Block("tempbuffer", 70));
-
+    
     expectedResult = 60;
     result = instance.getBuffers()[0].block().number();
     assertEquals(expectedResult, result);
@@ -82,7 +85,7 @@ public class BasicBufferMgrTest {
     instance.status();
     instance.pin(new Block("tempbuffer", 60));
     instance.pin(new Block("tempbuffer", 70));
-    instance.status();
+    //instance.status();
 
     expectedResult = 60;
     result = instance.getBuffers()[0].block().number();

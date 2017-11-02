@@ -1,12 +1,6 @@
 package simpledb.buffer;
 
 import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
 import simpledb.file.*;
 
 /**
@@ -71,7 +65,7 @@ class BasicBufferMgr {
             }
             buff.assignToBlock(blk);
         }
-        
+
         if (!buff.isPinned()) {
             numAvailable--;
         }
@@ -186,24 +180,30 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useFIFOStrategy() {
-        Timestamp min = Timestamp.valueOf("2045-01-1 03:00:00.0");
+        long min = bufferpool[0].getTimeAdded();
+        //Timestamp.valueOf("2045-01-1 03:00:00.0").getNanos();
         Buffer leastRecentlyAddedBuffer = new Buffer();
         for (Buffer buff : bufferpool) {
             if (!buff.isPinned()) {
-//                System.out.print("FIRST BUFFER:\n");
-//                System.out.print(buff + "\n");
-//                System.out.print("TIME ADDED:\n");
-//                System.out.print(buff.getTimeAdded());
-//                System.out.print("\nMIN:\n");
-//                System.out.print(min);
-//                System.out.print("\n");
-                if (buff.getTimeAdded().before(min)) {
-                    System.out.print("IN FIFO LOOP\n");
-                    min = buff.getTimeAdded();
-                    leastRecentlyAddedBuffer = buff;
+                System.out.print("\nFIRST BUFFER:\n");
+                System.out.print(buff);
+                System.out.print("\nTIME ADDED:\n");
+                System.out.print(buff.getTimeAdded());
+                System.out.print("\nMIN:\n");
+                System.out.print(min);
+                if (buff.getTimeAdded() == 0) {
+                    System.out.print("\nFIRST NULL BUFFER FOUND\n");
+                    return buff;
+                } else {
+                    if (min - buff.getTimeAdded() > 0) {
+                        System.out.print("\nFOUND BUFF WITH EARLIER TIME\n");
+                        min = buff.getTimeAdded();
+                        leastRecentlyAddedBuffer = buff;
+                    }
                 }
             }
         }
+        System.out.print("\nRETURNING BUFFER #" + leastRecentlyAddedBuffer.toString() + "\n");
         return leastRecentlyAddedBuffer;
     }
 
@@ -213,23 +213,24 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useLRUStrategy() {
-        Timestamp min = Timestamp.valueOf("2045-01-1 03:00:00.0");
+        long min = Timestamp.valueOf("2045-01-1 03:00:00.0").getNanos();
         Buffer leastRecentlyAccessedBuffer = new Buffer();
         for (Buffer buff : bufferpool) {
             if (!buff.isPinned()) {
-                if (buff.getTimeAccessed() == null) {
-                    System.out.print("FIRST NULL BUFFER FOUND");
+                if (buff.getTimeAccessed() == 0) {
+                    System.out.print("\nFIRST NULL BUFFER FOUND\n");
                     return buff;
                 } else {
-                    System.out.print("TIME ACCESSED:\n");
+                    System.out.print("\nTIME ACCESSED:\n");
                     System.out.print(buff.getTimeAccessed());
-                    if (buff.getTimeAccessed().before(min)) {
+                    if (buff.getTimeAccessed() - min > 0) {
                         min = buff.getTimeAccessed();
                         leastRecentlyAccessedBuffer = buff;
                     }
                 }
             }
         }
+        System.out.print(leastRecentlyAccessedBuffer.toString());
         return leastRecentlyAccessedBuffer;
     }
 
@@ -239,18 +240,20 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useClockStrategy() {
-        Timestamp max = Timestamp.valueOf("1997-05-11 10:10:10.0");
+        long max = Timestamp.valueOf("1997-05-11 10:10:10.0").getNanos();
         int mostRecentlyAccessedBufferIndex = 0;
-        for (int i=0; i < bufferpool.length; i++) {
-            if (bufferpool[i].getTimeAccessed().after(max)) {
+        for (int i = 0; i < bufferpool.length; i++) {
+            if (bufferpool[i].getTimeAccessed() - max < 0) {
                 max = bufferpool[i].getTimeAccessed();
                 mostRecentlyAccessedBufferIndex = i;
             }
         }
         if (mostRecentlyAccessedBufferIndex + 1 < bufferpool.length) {
+            System.out.print("\nONE MORE THAN MOST RECENTLY ACCESSED\n");
             return bufferpool[mostRecentlyAccessedBufferIndex + 1];
+        } else {
+            System.out.print("\nLOOP AROUND\n");
+            return bufferpool[0];
         }
-        
-        return null;
     }
 }

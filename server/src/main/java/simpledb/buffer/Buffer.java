@@ -21,8 +21,8 @@ public class Buffer {
     private int pins = 0;
     private int modifiedBy = -1;  // negative means not modified
     private int logSequenceNumber = -1; // negative means no corresponding log record
-    private Timestamp timeLastAdded;
-    private Timestamp timeLastAccessed;
+    private long timeLastAdded;
+    private long timeLastAccessed;
 
     /**
      * Creates a new buffer, wrapping a new {@link simpledb.file.Page page}.
@@ -102,23 +102,24 @@ public class Buffer {
     }
 
     public void updateTimeAdded() {
-        Timestamp now = new Timestamp(new Date().getTime());
+        long now = System.nanoTime();
         this.timeLastAdded = now;
 //       System.out.print("Time Added:");
 //       System.out.print(now);
     }
 
     public void updateTimeAccessed() {
-        Timestamp now = new Timestamp(new Date().getTime());
+        long now = System.nanoTime();
+        this.timeLastAccessed = now;
 //       System.out.print("Time Accessed:");
 //       System.out.print(now);
     }
 
-    public Timestamp getTimeAdded() {
+    public long getTimeAdded() {
         return this.timeLastAdded;
     }
 
-    public Timestamp getTimeAccessed() {
+    public long getTimeAccessed() {
         return this.timeLastAccessed;
     }
 

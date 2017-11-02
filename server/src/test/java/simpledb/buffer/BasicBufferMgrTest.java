@@ -85,7 +85,7 @@ public class BasicBufferMgrTest {
     instance.status();
     instance.pin(new Block("tempbuffer", 60));
     instance.pin(new Block("tempbuffer", 70));
-    //instance.status();
+    instance.status();
 
     expectedResult = 60;
     result = instance.getBuffers()[0].block().number();

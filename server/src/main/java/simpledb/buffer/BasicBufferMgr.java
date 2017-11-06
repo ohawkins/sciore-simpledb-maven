@@ -1,7 +1,32 @@
 package simpledb.buffer;
 
 import java.sql.Timestamp;
+import java.util.Arrays;
 import simpledb.file.*;
+
+/*
+NOTES BY O. HAWKINS:
+
+Added functionality for alternate buffer replacement algorithms FIFO, LRU, and Clock.
+The hardest function by far was Clock, mainly since there wasn't much code shared between
+the other functions. FIFO and LRU are basically the same, but for the Buffer attribute
+to be sorted by. There were some changes in the Buffer class, mainly adding information
+about when it was pinned / unpinned, and getting and setting this information. 
+
+My main idea was to use timestamps to organize and sort the buffers in the bufferpool.
+Each buffer would have two attributes about the the time it was pinned and the time it
+was unpinned, timeAdded and timeAccessed, which would be updated each time the buffer 
+was pinned or unpinned. Each strategy would use this information differently. The most 
+frustration came from working with Timestamps; initially I had set the min value to an 
+arbitrary date in the future (it was the estimated date of the singularity, if you're 
+interested) and tried to compare the buffers' timeAdded's to it, but it just was not 
+working, so I changed it to an arbitrary large number. Clock also was a bit of a pain, 
+especially since I had it written (so I thought) and then realized that everything I 
+had ever believed was a lie, and part of that fallout was having to rewrite the function. 
+Thanks to a number of people also in the third floor lab in Olin, I managed to find the 
+solution. It was a harrowing few hours.
+*/
+
 
 /**
  * Manages the pinning and unpinning of buffers to blocks.
@@ -14,6 +39,7 @@ class BasicBufferMgr {
     private Buffer[] bufferpool;
     private int numAvailable;
     private int strategy;
+    private int buffPointer;
 
     /**
      * Creates a buffer manager having the specified number of buffer slots.
@@ -71,6 +97,7 @@ class BasicBufferMgr {
         }
         buff.pin();
         buff.updateTimeAdded();
+        buffPointer = Arrays.asList(bufferpool).indexOf(buff) + 1;
         return buff;
     }
 
@@ -93,6 +120,7 @@ class BasicBufferMgr {
         buff.pin();
         // When a buffer is read in from memory, update its attribute
         buff.updateTimeAdded();
+        buffPointer = Arrays.asList(bufferpool).indexOf(buff) + 1;
         return buff;
     }
 
@@ -107,6 +135,7 @@ class BasicBufferMgr {
         buff.updateTimeAccessed();
         if (!buff.isPinned()) {
             numAvailable++;
+            buffPointer = Arrays.asList(bufferpool).indexOf(buff) + 1;
         }
     }
 
@@ -180,30 +209,27 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useFIFOStrategy() {
-        long min = bufferpool[0].getTimeAdded();
-        //Timestamp.valueOf("2045-01-1 03:00:00.0").getNanos();
-        Buffer leastRecentlyAddedBuffer = new Buffer();
+        long min = 1000000000000000L;
+        Buffer leastRecentlyAddedBuffer = null;
         for (Buffer buff : bufferpool) {
+            // if the buffer is pinned, ignore
             if (!buff.isPinned()) {
-                System.out.print("\nFIRST BUFFER:\n");
-                System.out.print(buff);
-                System.out.print("\nTIME ADDED:\n");
-                System.out.print(buff.getTimeAdded());
-                System.out.print("\nMIN:\n");
-                System.out.print(min);
-                if (buff.getTimeAdded() == 0) {
-                    System.out.print("\nFIRST NULL BUFFER FOUND\n");
-                    return buff;
-                } else {
+                // the first time around, this will be null
+                if (leastRecentlyAddedBuffer == null) {
+                    leastRecentlyAddedBuffer = buff;
+                }
+                // if the buffer had a time in
+                if (buff.getTimeAdded() != 0) {
+                    // compare its time in to the min value for time in
                     if (min - buff.getTimeAdded() > 0) {
-                        System.out.print("\nFOUND BUFF WITH EARLIER TIME\n");
+                        // set the min to the new, smaller value and update buffer
                         min = buff.getTimeAdded();
                         leastRecentlyAddedBuffer = buff;
                     }
                 }
             }
         }
-        System.out.print("\nRETURNING BUFFER #" + leastRecentlyAddedBuffer.toString() + "\n");
+        // this will be null if there are no unpinned buffers
         return leastRecentlyAddedBuffer;
     }
 
@@ -213,24 +239,26 @@ class BasicBufferMgr {
      * @return
      */
     private Buffer useLRUStrategy() {
-        long min = Timestamp.valueOf("2045-01-1 03:00:00.0").getNanos();
-        Buffer leastRecentlyAccessedBuffer = new Buffer();
+        long min = 1000000000000000L;
+        Buffer leastRecentlyAccessedBuffer = null;
         for (Buffer buff : bufferpool) {
+            // if the buffer is pinned, ignore
             if (!buff.isPinned()) {
-                if (buff.getTimeAccessed() == 0) {
-                    System.out.print("\nFIRST NULL BUFFER FOUND\n");
-                    return buff;
-                } else {
-                    System.out.print("\nTIME ACCESSED:\n");
-                    System.out.print(buff.getTimeAccessed());
-                    if (buff.getTimeAccessed() - min > 0) {
+                // the first time around, this will be null
+                if (leastRecentlyAccessedBuffer == null) {
+                    leastRecentlyAccessedBuffer = buff;
+                }
+                // if the buffer had a time out
+                if (buff.getTimeAccessed() != 0) {
+                    // compare its time in to the min value for time out
+                    if (min - buff.getTimeAccessed() > 0) {
+                        // set the min to the new, smaller value and update buffer
                         min = buff.getTimeAccessed();
                         leastRecentlyAccessedBuffer = buff;
                     }
                 }
             }
         }
-        System.out.print(leastRecentlyAccessedBuffer.toString());
         return leastRecentlyAccessedBuffer;
     }
 
@@ -239,21 +267,32 @@ class BasicBufferMgr {
      *
      * @return
      */
+ 
+    // I would like to dedicate this code to Alex Davis. May he never get a parking ticket.
+    
     private Buffer useClockStrategy() {
-        long max = Timestamp.valueOf("1997-05-11 10:10:10.0").getNanos();
-        int mostRecentlyAccessedBufferIndex = 0;
-        for (int i = 0; i < bufferpool.length; i++) {
-            if (bufferpool[i].getTimeAccessed() - max < 0) {
-                max = bufferpool[i].getTimeAccessed();
-                mostRecentlyAccessedBufferIndex = i;
+        // make a new thing to iterate over
+        Buffer[] newPool = new Buffer[bufferpool.length];
+        
+        // add everything after the pointer from bufferpool to the new pool
+        int index = 0;
+        for (int i = buffPointer; i < bufferpool.length; i++) {
+            newPool[index] = bufferpool[i];
+            index++;
+        }
+        
+        // add everything before the pointer from bufferpool to the new pool
+        for (int i = 0; i < buffPointer; i++) {
+            newPool[index] = bufferpool[i];
+            index++;
+        }
+        
+        // use naive and iterate over the newly constructed pool
+        for (Buffer buff : newPool) {
+            if (!buff.isPinned()) {
+                return buff;
             }
         }
-        if (mostRecentlyAccessedBufferIndex + 1 < bufferpool.length) {
-            System.out.print("\nONE MORE THAN MOST RECENTLY ACCESSED\n");
-            return bufferpool[mostRecentlyAccessedBufferIndex + 1];
-        } else {
-            System.out.print("\nLOOP AROUND\n");
-            return bufferpool[0];
-        }
+        return null;
     }
 }

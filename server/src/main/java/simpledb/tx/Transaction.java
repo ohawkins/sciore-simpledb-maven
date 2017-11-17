@@ -1,10 +1,13 @@
 package simpledb.tx;
 
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import simpledb.buffer.*;
 import simpledb.file.Block;
 import simpledb.server.SimpleDB;
 import simpledb.tx.concurrency.ConcurrencyMgr;
+import simpledb.tx.recovery.LogRecord;
 import simpledb.tx.recovery.RecoveryMgr;
 
 /**
@@ -208,12 +211,20 @@ public class Transaction {
      * @return
      */
     public static synchronized Boolean quiescentCkpt() {
-        if (activeTx.isEmpty()) {
-            rec = new CheckpointRecord();
-        } else {
-            checkpointWaiting = true;
-            // check every so often to see if the active list is empty
+        if (!activeTx.isEmpty()) {
+            checkpointWaiting = true; 
+            while (!activeTx.isEmpty()) {
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    Logger.getLogger(Transaction.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            LogRecord rec = LogRecord(new CheckpointRecord());
         }
+        return true;
     }
 
     private static synchronized int nextTxNumber() {

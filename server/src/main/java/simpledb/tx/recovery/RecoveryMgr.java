@@ -45,6 +45,7 @@ public class RecoveryMgr {
     * Recovers uncompleted transactions from the log,
     * then writes a quiescent checkpoint record to the log and flushes it.
     */
+   //TODO: change to not need txnum
    public void recover() {
       doRecover();
       SimpleDB.bufferMgr().flushAll(txnum);

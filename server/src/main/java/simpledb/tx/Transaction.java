@@ -27,6 +27,7 @@ public class Transaction {
     private static ArrayList<Transaction> activeTx = new ArrayList<Transaction>();
     private static ArrayList<Transaction> waitingTx = new ArrayList<Transaction>();
     private static boolean checkpointWaiting = false;
+    private static Integer lock = new Integer(0);
 
     /**
      * Creates a new transaction and its associated recovery and concurrency
@@ -47,6 +48,15 @@ public class Transaction {
         } else {
             waitingTx.add(this);
         }
+        while (checkpointWaiting) {
+            try {
+                lock.wait(); // keep them waiting
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(Transaction.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
     }
 
     /**
@@ -211,18 +221,17 @@ public class Transaction {
      * @return
      */
     public static synchronized Boolean quiescentCkpt() {
-        if (!activeTx.isEmpty()) {
-            checkpointWaiting = true; 
+        if (!activeTx.isEmpty() & nextTxNum % 10 == 0) {
+            checkpointWaiting = true;
             while (!activeTx.isEmpty()) {
                 try {
                     Thread.sleep(1000);
-                }
-                catch (InterruptedException ex) {
+                } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                     Logger.getLogger(Transaction.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-            LogRecord rec = LogRecord(new CheckpointRecord());
+            QCPThread qcp = new QCPThread();
         }
         return true;
     }

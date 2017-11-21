@@ -8,6 +8,7 @@ package simpledb.tx;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import simpledb.server.SimpleDB;
+import simpledb.tx.recovery.CheckpointRecord;
 
 /**
  *
@@ -16,14 +17,12 @@ import simpledb.server.SimpleDB;
 public class QCPThread implements Runnable {
     
     private static Object qcpLock = new Object();
-    private static Boolean inProgress = true;
     
     @Override
     public void run() {
-        while (!inProgress) {
+        while (!Transaction.inProgress) { // if there are any active transactions
             synchronized (qcpLock) {
                 try {
-                    Thread.sleep(1000);
                     qcpLock.wait();
                 } catch (InterruptedException ex) {
                     Logger.getLogger(QCPThread.class.getName()).log(Level.SEVERE, null, ex);
@@ -32,11 +31,18 @@ public class QCPThread implements Runnable {
         
         // Flush all buffers
         SimpleDB.bufferMgr().definitelyFlushAll();
-        }
-    
+        
+        // Write a new CheckpointRecord
+        CheckpointRecord ckptRec = new CheckpointRecord();
+        int recNum = ckptRec.writeToLog();
+        // Flush the log
+        SimpleDB.logMgr().flush(recNum);
+        
 
-    // flush buffers (use on each buffer in bufferpool)
-        // write to log file
-        // 
+        // Set inProgress to false
+        Transaction.inProgress = false;
+        // Transaction lock is available -> notifyAll()
+        Transaction.tLock.notifyAll();
         }
     }
+}

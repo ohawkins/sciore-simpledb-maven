@@ -24,8 +24,8 @@ public class Transaction {
     private int txnum;
     private BufferList myBuffers = new BufferList();
     private static ArrayList<Transaction> activeTx = new ArrayList<Transaction>();
-    private static boolean inProgress = false;
-    private static Object tLock = new Object();
+    public static boolean inProgress = false;
+    public static Object tLock = new Object();
 
     /**
      * Creates a new transaction and its associated recovery and concurrency
@@ -45,7 +45,6 @@ public class Transaction {
         while (inProgress) {
             try {
                 tLock.wait(); // keep them waiting
-                Thread.sleep(1000);
             } catch (InterruptedException ex) {
                 Logger.getLogger(Transaction.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -89,6 +88,7 @@ public class Transaction {
         concurMgr.release();
         myBuffers.unpinAll();
         activeTx.remove(this);
+        tLock.notifyAll();
         System.out.println("transaction " + txnum + " rolled back");
     }
 

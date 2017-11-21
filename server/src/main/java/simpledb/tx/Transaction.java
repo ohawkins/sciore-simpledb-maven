@@ -7,7 +7,6 @@ import simpledb.buffer.*;
 import simpledb.file.Block;
 import simpledb.server.SimpleDB;
 import simpledb.tx.concurrency.ConcurrencyMgr;
-import simpledb.tx.recovery.LogRecord;
 import simpledb.tx.recovery.RecoveryMgr;
 
 /**
@@ -25,9 +24,8 @@ public class Transaction {
     private int txnum;
     private BufferList myBuffers = new BufferList();
     private static ArrayList<Transaction> activeTx = new ArrayList<Transaction>();
-    private static ArrayList<Transaction> waitingTx = new ArrayList<Transaction>();
-    private static boolean checkpointWaiting = false;
-    private static Integer lock = new Integer(0);
+    private static boolean inProgress = false;
+    private static Object tLock = new Object();
 
     /**
      * Creates a new transaction and its associated recovery and concurrency
@@ -40,23 +38,30 @@ public class Transaction {
      * called first.
      */
     public Transaction() {
+        // Get new transaction number
         txnum = nextTxNumber();
-        recoveryMgr = new RecoveryMgr(txnum);
-        concurMgr = new ConcurrencyMgr();
-        if (!checkpointWaiting) {
-            activeTx.add(this);
-        } else {
-            waitingTx.add(this);
-        }
-        while (checkpointWaiting) {
+        
+        // Acquire transaction lock
+        while (inProgress) {
             try {
-                lock.wait(); // keep them waiting
+                tLock.wait(); // keep them waiting
                 Thread.sleep(1000);
             } catch (InterruptedException ex) {
                 Logger.getLogger(Transaction.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-
+        
+        // Create everything else
+        recoveryMgr = new RecoveryMgr(txnum);
+        concurMgr = new ConcurrencyMgr();
+        
+        // Add to list of active transactions
+        activeTx.add(this);
+        
+        if (txnum % 10 == 0) {
+            inProgress = true;
+            QCPThread th = new QCPThread();
+        }
     }
 
     /**
@@ -69,6 +74,8 @@ public class Transaction {
         concurMgr.release();
         myBuffers.unpinAll();
         activeTx.remove(this);
+        //checkpointWaiting = frusle;
+        tLock.notifyAll();
         System.out.println("transaction " + txnum + " committed");
     }
 
@@ -213,6 +220,12 @@ public class Transaction {
         return blk;
     }
 
+    private static synchronized int nextTxNumber() {
+        nextTxNum++;
+        System.out.println("new transaction: " + nextTxNum);
+        return nextTxNum;
+    }
+
     /**
      * Creates a quiescent checkpoint, meaning it checks to make sure there are
      * no active transactions running and keeps other transactions from
@@ -221,8 +234,8 @@ public class Transaction {
      * @return
      */
     public static synchronized Boolean quiescentCkpt() {
-        if (!activeTx.isEmpty() & nextTxNum % 10 == 0) {
-            checkpointWaiting = true;
+        if (!activeTx.isEmpty()) {
+            inProgress = true;
             while (!activeTx.isEmpty()) {
                 try {
                     Thread.sleep(1000);
@@ -234,11 +247,5 @@ public class Transaction {
             QCPThread qcp = new QCPThread();
         }
         return true;
-    }
-
-    private static synchronized int nextTxNumber() {
-        nextTxNum++;
-        System.out.println("new transaction: " + nextTxNum);
-        return nextTxNum;
     }
 }

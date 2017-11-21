@@ -23,7 +23,7 @@ public class Transaction {
     private ConcurrencyMgr concurMgr;
     private int txnum;
     private BufferList myBuffers = new BufferList();
-    private static ArrayList<Transaction> activeTx = new ArrayList<Transaction>();
+    public static ArrayList<Transaction> activeTx = new ArrayList<Transaction>();
     public static boolean inProgress = false;
     public static Object tLock = new Object();
 
@@ -57,8 +57,10 @@ public class Transaction {
         // Add to list of active transactions
         activeTx.add(this);
         
+        // After ten transactions, start a quiescent checkpoint
         if (txnum % 10 == 0) {
             inProgress = true;
+            System.out.println("TIME TO MAKE A NEW THREAD");
             QCPThread th = new QCPThread();
         }
     }
@@ -73,7 +75,6 @@ public class Transaction {
         concurMgr.release();
         myBuffers.unpinAll();
         activeTx.remove(this);
-        //checkpointWaiting = frusle;
         tLock.notifyAll();
         System.out.println("transaction " + txnum + " committed");
     }
@@ -224,28 +225,5 @@ public class Transaction {
         nextTxNum++;
         System.out.println("new transaction: " + nextTxNum);
         return nextTxNum;
-    }
-
-    /**
-     * Creates a quiescent checkpoint, meaning it checks to make sure there are
-     * no active transactions running and keeps other transactions from
-     * occurring.
-     *
-     * @return
-     */
-    public static synchronized Boolean quiescentCkpt() {
-        if (!activeTx.isEmpty()) {
-            inProgress = true;
-            while (!activeTx.isEmpty()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                    Logger.getLogger(Transaction.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-            QCPThread qcp = new QCPThread();
-        }
-        return true;
     }
 }

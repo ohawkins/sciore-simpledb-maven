@@ -8,7 +8,7 @@ import simpledb.record.Schema;
   */
 public class SelectPlan implements Plan {
    private Plan p;
-   private Predicate pred;
+    private Predicate pred;
    
    /**
     * Creates a new select node in the query tree,

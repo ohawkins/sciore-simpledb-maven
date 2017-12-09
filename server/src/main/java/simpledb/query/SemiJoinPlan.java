@@ -4,12 +4,12 @@ import simpledb.record.Schema;
 import java.util.Collection;
 
 /**
- * The Plan class corresponding to the <i>join</i>
+ * The Plan class corresponding to the <i>semijoin</i>
  * relational algebra operator.
  *
- * @author cs440
+ * @author ohawkins
  */
-public class JoinPlan implements Plan {
+public class SemiJoinPlan implements Plan {
 
     private Plan p1;
     private Plan p2;
@@ -17,13 +17,14 @@ public class JoinPlan implements Plan {
     private Schema schema = new Schema();
 
     /**
-     * Creates a new project node in the query tree, having the specified
+     * Creates a new semijoin node in the query tree, having the specified
      * subquery and field list.
      *
-     * @param p the subquery
-     * @param fieldlist the list of fields
+     * @param p1 the first subquery
+     * @param p2 the second subquery
+     * @param pred the predicate
      */
-    public JoinPlan(Plan p1, Plan p2, Predicate pred) {
+    public SemiJoinPlan(Plan p1, Plan p2, Predicate pred) {
         this.p1 = p1;
         this.p2 = p2;
         this.pred = pred;
@@ -37,7 +38,7 @@ public class JoinPlan implements Plan {
     public Scan open() {
         Scan s1 = p1.open();
         Scan s2 = p2.open();
-        return new JoinScan(s1, s2, this.pred);
+        return new SemiJoinScan(s1, s2, this.pred);
     }
 
     /**
